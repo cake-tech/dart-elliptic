@@ -10,8 +10,7 @@ class PrivateKey {
   PrivateKey.fromBytes(this.curve, List<int> bytes) {
     var byteLen = (curve.bitSize + 7) >> 3;
     D = BigInt.parse(
-        List<String>.generate(
-            byteLen, (i) => bytes[i].toRadixString(16).padLeft(2, '0')).join(),
+        List<String>.generate(byteLen, (i) => bytes[i].toRadixString(16).padLeft(2, '0')).join(),
         radix: 16);
   }
 
@@ -42,8 +41,51 @@ class PrivateKey {
     return toHex();
   }
 
+  /// [toCompressedHex] generate a compressed hex string from a private key
+  String toCompressedHex() {
+    var byteLen = (this.curve.bitSize + 7) >> 3;
+    var hex = this.D.toRadixString(16).padLeft(byteLen * 2, '0');
+    return hex;
+  }
+
   @override
   bool operator ==(other) {
     return other is PrivateKey && (curve == other.curve && D == other.D);
+  }
+
+  PrivateKey? tweakAdd(BigInt tweak) {
+    D = (D + tweak) % curve.n;
+
+    if (isValidPrivateKey(D, curve)) {
+      return this; // Tweak addition successful
+    } else {
+      return null;
+    }
+  }
+
+  PrivateKey? tweakMul(BigInt tweak) {
+    // Check if the private key and tweak are valid
+    if (!isValidPrivateKey(D, curve) || tweak >= curve.n) {
+      return null; // Invalid private key or tweak
+    }
+
+    // Perform the tweak multiplication
+    D = (D * tweak) % curve.n;
+
+    return this; // Tweak multiplication successful
+  }
+
+  PrivateKey? negate() {
+    if (isValidPrivateKey(D, curve)) {
+      D = curve.n - D; // Negate the private key by subtracting from the order of the curve
+      return this;
+    } else {
+      return null; // Private key is invalid
+    }
+  }
+
+  bool isValidPrivateKey(BigInt privateKey, Curve curve) {
+    // Ensure the private key is not zero and is within the range [1, n-1]
+    return (privateKey != BigInt.zero) && (privateKey < curve.n);
   }
 }
