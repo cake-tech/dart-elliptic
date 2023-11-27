@@ -7,11 +7,16 @@ class PrivateKey {
 
   PrivateKey(this.curve, this.D);
 
-  PrivateKey.fromBytes(this.curve, List<int> bytes) {
+  PrivateKey.fromBytes(this.curve, List<int> bytes, {bool compress = false}) {
     var byteLen = (curve.bitSize + 7) >> 3;
     D = BigInt.parse(
         List<String>.generate(byteLen, (i) => bytes[i].toRadixString(16).padLeft(2, '0')).join(),
         radix: 16);
+
+    if (compress) {
+      var pub = curve.privateToPublicKey(this);
+      D = pub.Y.isOdd ? pub.X + curve.n : pub.X;
+    }
   }
 
   PrivateKey.fromHex(this.curve, String hexRand) {

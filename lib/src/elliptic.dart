@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:hex/hex.dart';
+
 import 'base.dart';
 import 'privatekey.dart';
 import 'publickey.dart';
@@ -22,8 +24,7 @@ class EllipticCurve implements Curve {
   late BigInt S; // TODO: use the seed
 
   @override
-  late AffinePoint
-      G; // Gx&Gy are the x&y coordinate of the base point, respectively
+  late AffinePoint G; // Gx&Gy are the x&y coordinate of the base point, respectively
 
   @override
   late int bitSize; // bitSize is the size of the underlying field in bits.
@@ -35,8 +36,7 @@ class EllipticCurve implements Curve {
   late int h; // the cofactor
 
   /// S currenly is not used by this package
-  EllipticCurve(this.name, this.bitSize, this.p, this.a, this.b, this.S, this.G,
-      this.n, this.h);
+  EllipticCurve(this.name, this.bitSize, this.p, this.a, this.b, this.S, this.G, this.n, this.h);
 
   @override
   AffinePoint add(AffinePoint p1, AffinePoint p2) {
@@ -72,8 +72,7 @@ class EllipticCurve implements Curve {
       for (var bitNum = 0; bitNum < 8; bitNum++) {
         _p = _doubleJacobian(_p.X, _p.Y, _p.Z);
         if (byte & 0x80 == 0x80) {
-          _p = _addJacobian(
-              basePoint.X, basePoint.Y, BigInt.one, _p.X, _p.Y, _p.Z);
+          _p = _addJacobian(basePoint.X, basePoint.Y, BigInt.one, _p.X, _p.Y, _p.Z);
         }
         byte <<= 1;
       }
@@ -89,8 +88,7 @@ class EllipticCurve implements Curve {
 
   // addJacobian takes two points in Jacobian coordinates, (x1, y1, z1) and
   // (x2, y2, z2) and returns their sum, also in Jacobian form.
-  JacobianPoint _addJacobian(
-      BigInt x1, BigInt y1, BigInt z1, BigInt x2, BigInt y2, BigInt z2) {
+  JacobianPoint _addJacobian(BigInt x1, BigInt y1, BigInt z1, BigInt x2, BigInt y2, BigInt z2) {
     // See https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-2007-bl
     BigInt x3, y3, z3;
     if (z1.sign == 0) {
@@ -257,8 +255,7 @@ class EllipticCurve implements Curve {
     var yy = y.modPow(BigInt.two, p);
     var yyyy = y.modPow(BigInt.from(4), p);
 
-    x3 = (BigInt.from(3) * xx + a).modPow(BigInt.two, p) -
-        BigInt.from(8) * x * yy;
+    x3 = (BigInt.from(3) * xx + a).modPow(BigInt.two, p) - BigInt.from(8) * x * yy;
     if (x3.sign < 0) {
       x3 += p;
     }
@@ -343,9 +340,7 @@ class EllipticCurve implements Curve {
       // This is because, in tests, rand will return all zeros and we don't
       // want to get the point at infinity and loop forever.
       rand[1] ^= 0x42;
-      D = BigInt.parse(
-          List<String>.generate(byteLen, (i) => rand[i].toRadixString(16))
-              .join(),
+      D = BigInt.parse(List<String>.generate(byteLen, (i) => rand[i].toRadixString(16)).join(),
           radix: 16);
 
       // If the scalar is out of range, sample another random number.
@@ -412,18 +407,23 @@ class EllipticCurve implements Curve {
 
   @override
   PublicKey compressedHexToPublicKey(String hex) {
-    if (hex.substring(0, 2) != '03' && hex.substring(0, 2) != '02') {
+    final bytes = HEX.decode(hex);
+
+    if (bytes.length == 33
+        ? hex.substring(0, 2) != '03' && hex.substring(0, 2) != '02'
+        : HEX.decode(hex).length != 32) {
       throw ('invalid public key hex string');
     }
 
     var byteLen = (bitSize + 7) >> 3;
 
-    if (hex.length != 2 * (1 + byteLen)) {
+    if (bytes.length == 33 && hex.length != 2 * (1 + byteLen)) {
       throw ('invalid public key hex string');
     }
     // y² = x³ - 3x + b
 
-    var x = BigInt.parse(hex.substring(2 * 1, 2 * (1 + byteLen)), radix: 16);
+    var x =
+        BigInt.parse(bytes.length == 33 ? hex.substring(2 * 1, 2 * (1 + byteLen)) : hex, radix: 16);
     if (x > p) {
       throw ('invalid public key X value');
     }

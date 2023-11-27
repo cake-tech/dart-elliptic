@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+
+import 'package:hex/hex.dart';
+
 import 'base.dart';
 import 'err.dart';
 
@@ -30,8 +34,15 @@ class PublicKey extends AffinePoint {
         pub = curve.hexToPublicKey(hex);
         break;
       default:
-        throw ErrInvalidPublicKeyHexPrefix;
+        pub = curve.compressedHexToPublicKey(hex);
     }
+
+    X = pub.X;
+    Y = pub.Y;
+  }
+
+  PublicKey.fromBytes(this.curve, Uint8List bytes) {
+    final pub = PublicKey.fromHex(curve, HEX.encode(bytes));
 
     X = pub.X;
     Y = pub.Y;
@@ -60,14 +71,14 @@ class PublicKey extends AffinePoint {
 
   PublicKey tweakAdd(BigInt tweak) {
     // Compute the new public key after adding the tweak
-    AffinePoint tweakedKey = curve.add(this, scalarMultiply(curve.G, tweak));
+    final tweakedKey = curve.add(this, scalarMultiply(curve.G, tweak));
 
     return PublicKey.fromPoint(curve, tweakedKey);
   }
 
   AffinePoint scalarMultiply(AffinePoint point, BigInt scalar) {
-    AffinePoint result = AffinePoint.fromXY(BigInt.zero, BigInt.zero);
-    AffinePoint current = point;
+    var result = AffinePoint.fromXY(BigInt.zero, BigInt.zero);
+    var current = point;
 
     while (scalar > BigInt.zero) {
       if (scalar.isOdd) {
@@ -80,9 +91,17 @@ class PublicKey extends AffinePoint {
     return result;
   }
 
+  PublicKey pubkeyAdd(PublicKey other) {
+    // Compute the new public key after adding the tweak
+    final tweakedKey = curve.add(this, other);
+
+    return PublicKey.fromPoint(curve, tweakedKey);
+  }
+
+  // Perform the tweak multiplication
   PublicKey? tweakMul(BigInt tweak) {
     // Perform the tweak multiplication
-    AffinePoint tweakedPoint = scalarMultiply(this, tweak);
+    var tweakedPoint = scalarMultiply(this, tweak);
 
     // Verify the validity of the resulting public key (implementation depends on your library)
     if (isValidPublicKey(tweakedPoint, curve)) {
@@ -105,17 +124,17 @@ class PublicKey extends AffinePoint {
     }
 
     // Check if the public key's coordinates are within the curve's field size.
-    final BigInt p = curve.p;
-    final BigInt x = publicKey.X;
-    final BigInt y = publicKey.Y;
+    final p = curve.p;
+    final x = publicKey.X;
+    final y = publicKey.Y;
 
     if (x < BigInt.zero || x >= p || y < BigInt.zero || y >= p) {
       return false;
     }
 
     // Check if the public key satisfies the curve equation: y^2 = x^3 + 7 (mod p)
-    final BigInt ySquared = (y * y) % p;
-    final BigInt xCubedPlus7 = (x * x * x + BigInt.from(7)) % p;
+    final ySquared = (y * y) % p;
+    final xCubedPlus7 = (x * x * x + BigInt.from(7)) % p;
 
     if (ySquared != xCubedPlus7) {
       return false;
