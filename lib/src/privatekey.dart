@@ -93,4 +93,8 @@ class PrivateKey {
     // Ensure the private key is not zero and is within the range [1, n-1]
     return (privateKey != BigInt.zero) && (privateKey < curve.n);
   }
+
+  PrivateKey copy() {
+    return PrivateKey(curve, D);
+  }
 }

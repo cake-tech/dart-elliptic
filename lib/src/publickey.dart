@@ -149,4 +149,8 @@ class PublicKey extends AffinePoint {
 
     return this; // Always return 1 to indicate success
   }
+
+  PublicKey copy() {
+    return PublicKey.fromPoint(curve, this);
+  }
 }
